@@ -1,90 +1,111 @@
+from pathlib import Path
+import sys
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-import google.generativeai as genai
 from dotenv import load_dotenv
-import os
-import json
+import os, json, asyncio
+
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from google.genai.types import Content, Part
+
+RUNTIME_ROOT = Path(__file__).resolve().parent.parent
+if str(RUNTIME_ROOT) not in sys.path:
+    sys.path.insert(0, str(RUNTIME_ROOT))
+
+from agents.cos.agent import cos_agent
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+app = FastAPI(title="ATLAS Runtime", version="0.2.0")
 
-app = FastAPI(title="ATLAS Runtime", version="0.1.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Chief-of-Staff system prompt
-COS_PROMPT = """
-You are the Chief-of-Staff for a solo startup founder.
-Your job is to onboard them by learning everything about their startup.
-
-Ask these questions ONE AT A TIME in a natural conversation:
-1. What is your startup called and what does it do?
-2. Who is your target customer?
-3. What problem are you solving for them?
-4. What stage are you at? (idea / prototype / revenue)
-5. What are your top 3 goals for the next 30 days?
-6. What tools do you currently use? (GitHub, Slack, Notion, etc.)
-7. What is your biggest blocker right now?
-
-After all 7 answers, say:
-"Perfect. I've briefed your team. Your agents are ready."
-
-Be warm, sharp, and concise. You are a world-class Chief of Staff.
-"""
-
-class Message(BaseModel):
-    role: str
-    content: str
+session_service = InMemorySessionService()
+runner = Runner(
+    agent=cos_agent,
+    app_name="atlas",
+    session_service=session_service
+)
 
 class ChatRequest(BaseModel):
-    messages: list[Message]
+    message: str
     startup_id: str = "default"
+    session_id: str = "default"
 
 @app.get("/health")
 def health():
-    return {"status": "ATLAS Runtime is live", "version": "0.1.0"}
+    return {"status": "ATLAS Runtime is live", "version": "0.2.0"}
 
 @app.post("/chat/cos")
 async def chat_with_cos(request: ChatRequest):
-    """Chief-of-Staff onboarding conversation."""
-    
-    model = genai.GenerativeModel(
-        model_name="gemini-2.0-flash",
-        system_instruction=COS_PROMPT
+    """CoS chat with ADK runner + SSE streaming."""
+
+    # Create session BEFORE stream starts
+    existing = await session_service.get_session(
+        app_name="atlas",
+        user_id=request.startup_id,
+        session_id=request.session_id
     )
-    
-    # Build conversation history
-    history = []
-    for msg in request.messages[:-1]:  # all except last
-        history.append({
-            "role": "user" if msg.role == "user" else "model",
-            "parts": [msg.content]
-        })
-    
-    chat = model.start_chat(history=history)
-    
-    # Send latest message
-    last_message = request.messages[-1].content
-    response = chat.send_message(last_message)
-    
-    return {
-        "response": response.text,
-        "startup_id": request.startup_id,
-        "agent": "chief-of-staff"
-    }
+    if existing is None:
+        await session_service.create_session(
+            app_name="atlas",
+            user_id=request.startup_id,
+            session_id=request.session_id
+        )
+
+    def extract_text(event):
+        if getattr(event, "content", None) and getattr(event.content, "parts", None):
+            text = "".join(part.text for part in event.content.parts if getattr(part, "text", None))
+            if text:
+                return text
+        response = getattr(event, "response", None)
+        candidates = getattr(response, "candidates", None) or []
+        if candidates:
+            content = getattr(candidates[0], "content", None)
+            parts = getattr(content, "parts", None) or []
+            text = "".join(part.text for part in parts if getattr(part, "text", None))
+            if text:
+                return text
+        return ""
+
+    async def stream():
+        yield f"data: {json.dumps({'status': 'started', 'agent': 'chief-of-staff', 'startup_id': request.startup_id})}\n\n"
+
+        content = Content(
+            role="user",
+            parts=[Part(text=request.message)]
+        )
+        latest_text = ""
+        async for event in runner.run_async(
+            user_id=request.startup_id,
+            session_id=request.session_id,
+            new_message=content
+        ):
+            text = extract_text(event)
+            if getattr(event, "partial", False) and text and text != latest_text:
+                latest_text = text
+                yield f"data: {json.dumps({'type': 'chunk', 'response': text, 'agent': 'chief-of-staff', 'startup_id': request.startup_id})}\n\n"
+
+            if event.is_final_response():
+                final_text = text or latest_text
+                yield f"data: {json.dumps({'response': final_text, 'agent': 'chief-of-staff', 'startup_id': request.startup_id})}\n\n"
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 @app.get("/")
 def root():
     return {
         "product": "ATLAS",
         "tagline": "You're the CEO. Everything below you is AI.",
-        "agents": [
-            "chief-of-staff",
-            "cto",
-            "cmo", 
-            "cfo",
-            "coo",
-            "research"
-        ],
-        "status": "Day 2 of 42 — building"
+        "agents": ["chief-of-staff", "cto", "cmo", "cfo", "coo", "research"],
+        "status": "Week 1 — CoS agent live"
     }
