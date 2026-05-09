@@ -41,14 +41,13 @@ Frontend:  DONE (S01) — services/atlas-frontend/
            Firebase project: atlas-b8cb1
            NOTE: .env.local NOT committed (has Firebase keys)
 
-Firestore: PARTIALLY WIRED — lazy-init in tools.py
-           Needs GCP ADC: gcloud auth application-default login
-           OR service account key → GOOGLE_APPLICATION_CREDENTIALS in .env
-           GCP project: atlas-prod-2026 (separate from Firebase atlas-b8cb1)
+Firestore: DONE (S02) — lazy-init in tools.py wired to atlas-b8cb1
+           ADC set, quota project = atlas-b8cb1
+           Collection: startups/{startup_id} — all 7 CoS fields confirmed writing
 
 Auth:      DONE (Firebase Google OAuth, frontend only)
 Payments:  NOT DONE
-Agents:    CoS only — CTO/CMO/CFO/COO/Research not built
+Agents:    CoS + CTO + CMO + CFO + COO live — Research not built
 Deployed:  NOT DEPLOYED — local only
 ```
 
@@ -66,9 +65,20 @@ atlas/
 │       ├── app/
 │       │   └── main.py                ← FastAPI + ADK runner + SSE
 │       ├── agents/
-│       │   └── cos/
-│       │       ├── agent.py           ← CoS LlmAgent (gemini-2.5-flash)
-│       │       └── tools.py           ← in-memory save/get (not Firestore yet)
+│       │   ├── cos/
+│       │   │   ├── agent.py           ← CoS LlmAgent (gemini-2.5-flash)
+│       │   │   └── tools.py           ← Firestore save/get (atlas-b8cb1)
+│       │   ├── cto/
+│       │   │   └── agent.py           ← CTO LlmAgent + GitHub MCP toolset
+│       │   ├── cmo/
+│       │   │   ├── agent.py           ← CMO LlmAgent + google_search grounding
+│       │   │   └── tools.py           ← Firestore content drafts (ready for S10)
+│       │   ├── cfo/
+│       │   │   ├── agent.py           ← CFO LlmAgent + calculation FunctionTools
+│       │   │   └── tools.py           ← runway, mrr, unit_economics, break_even, projection
+│       │   └── coo/
+│       │       ├── agent.py           ← COO LlmAgent + task CRUD tools
+│       │       └── tools.py           ← create/list/update/delete tasks in Firestore
 │       ├── requirements.txt
 │       └── .env                       ← GEMINI_API_KEY (never commit)
 └── frontend/                          ← EMPTY — S01 builds this
@@ -96,10 +106,10 @@ Streaming:  SSE (not WebSocket)
 | Agent | Model | Status |
 |---|---|---|
 | Chief-of-Staff | gemini-2.5-flash | WORKING |
-| CTO | gemini-2.5-pro | not built |
-| CMO | gemini-2.5-pro | not built |
-| CFO | gemini-2.5-flash | not built |
-| COO | gemini-2.5-flash | not built |
+| CTO | gemini-2.5-flash | WORKING (switch to pro once billing enabled) |
+| CMO | gemini-2.5-flash | WORKING (switch to pro once billing enabled) |
+| CFO | gemini-2.5-flash | WORKING (Stripe tools added in S10) |
+| COO | gemini-2.5-flash | WORKING |
 | Research | gemini-2.5-pro | not built |
 
 ---
@@ -109,6 +119,18 @@ Streaming:  SSE (not WebSocket)
 GET  /          → product metadata + agent list
 GET  /health    → version check
 POST /chat/cos  → CoS SSE streaming
+                  body: { message: str, startup_id: str, session_id: str }
+                  events: started → chunk (partial) → final response
+POST /chat/cto  → CTO SSE streaming (GitHub MCP — 26 tools)
+                  body: { message: str, startup_id: str, session_id: str }
+                  events: started → final response
+POST /chat/cmo  → CMO SSE streaming (Google Search grounding)
+                  body: { message: str, startup_id: str, session_id: str }
+                  events: started → chunk (partial) → final response
+POST /chat/cfo  → CFO SSE streaming (runway, MRR, unit economics, break-even, projections)
+                  body: { message: str, startup_id: str, session_id: str }
+                  events: started → chunk (partial) → final response
+POST /chat/coo  → COO SSE streaming (task CRUD — create, list, update status, delete)
                   body: { message: str, startup_id: str, session_id: str }
                   events: started → chunk (partial) → final response
 ```
@@ -121,11 +143,11 @@ One session = one feature. Finish fully before next.
 | Session | Feature | Status |
 |---|---|---|
 | S01 | Frontend: React + Firebase Auth + Chat UI | DONE |
-| S02 | Firestore: wire tools.py to real DB | NEXT |
-| S03 | CTO Agent + GitHub MCP | pending |
-| S04 | CMO Agent + social tools | pending |
-| S05 | CFO Agent + Stripe | pending |
-| S06 | COO Agent + tasks | pending |
+| S02 | Firestore: wire tools.py to real DB | DONE |
+| S03 | CTO Agent + GitHub MCP | DONE |
+| S04 | CMO Agent + social tools | DONE |
+| S05 | CFO Agent + financial calculators | DONE |
+| S06 | COO Agent + tasks | DONE |
 | S07 | Research Agent + Search grounding | pending |
 | S08 | Morning Brief SequentialAgent | pending |
 | S09 | Cloud Run deploy | pending |
@@ -152,7 +174,8 @@ Never commit: .env / venv/ / __pycache__ / .DS_Store / node_modules/
 
 ## HARD RULES
 - Never use google.generativeai — ADK only
-- Never do math in CFO agent — code_execution tool only
+- Never let CFO LLM do arithmetic directly — always call a calculation FunctionTool
+  (code_execution does not exist in google-adk 1.33; use runway/mrr/unit_economics/break_even/projection tools)
 - Never commit secrets
 - Never add new agent before S01+S02 complete
 - Ship working over perfect
