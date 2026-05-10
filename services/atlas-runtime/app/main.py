@@ -27,6 +27,8 @@ from agents.cto.agent import create_cto_agent
 from agents.cmo.agent import cmo_agent
 from agents.cfo.agent import cfo_agent
 from agents.coo.agent import coo_agent
+from agents.research.agent import research_agent
+from agents.morning_brief.agent import morning_brief_agent
 
 session_service = InMemorySessionService()
 
@@ -54,6 +56,18 @@ coo_runner = Runner(
     session_service=session_service,
 )
 
+research_runner = Runner(
+    agent=research_agent,
+    app_name="atlas",
+    session_service=session_service,
+)
+
+morning_brief_runner = Runner(
+    agent=morning_brief_agent,
+    app_name="atlas",
+    session_service=session_service,
+)
+
 cto_runner: Runner | None = None
 _cto_toolset = None
 
@@ -74,7 +88,7 @@ async def lifespan(_app: FastAPI):
         await _cto_toolset.close()
 
 
-app = FastAPI(title="ATLAS Runtime", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="ATLAS Runtime", version="0.4.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -144,7 +158,7 @@ async def run_agent_stream(runner: Runner, request: ChatRequest, agent_name: str
 
 @app.get("/health")
 def health():
-    return {"status": "ATLAS Runtime is live", "version": "0.3.0"}
+    return {"status": "ATLAS Runtime is live", "version": "0.4.0"}
 
 
 @app.post("/chat/cos")
@@ -167,6 +181,11 @@ async def chat_with_coo(request: ChatRequest):
     return await run_agent_stream(coo_runner, request, "coo")
 
 
+@app.post("/chat/research")
+async def chat_with_research(request: ChatRequest):
+    return await run_agent_stream(research_runner, request, "research")
+
+
 @app.post("/chat/cto")
 async def chat_with_cto(request: ChatRequest):
     if cto_runner is None:
@@ -175,11 +194,23 @@ async def chat_with_cto(request: ChatRequest):
     return await run_agent_stream(cto_runner, request, "cto")
 
 
+@app.post("/chat/morning-brief")
+async def chat_morning_brief(request: ChatRequest):
+    # Inject startup_id into message so task_brief_agent can pass it to list_tasks
+    # Use isolated session to avoid polluting the main chat session
+    enriched = ChatRequest(
+        message=f"startup_id={request.startup_id}",
+        startup_id=request.startup_id,
+        session_id=f"morning-{request.startup_id}",
+    )
+    return await run_agent_stream(morning_brief_runner, enriched, "morning-brief")
+
+
 @app.get("/")
 def root():
     return {
         "product": "ATLAS",
         "tagline": "You're the CEO. Everything below you is AI.",
         "agents": ["chief-of-staff", "cto", "cmo", "cfo", "coo", "research"],
-        "status": "S06 — CoS + CTO + CMO + CFO + COO live",
+        "status": "S08 — morning brief live",
     }
