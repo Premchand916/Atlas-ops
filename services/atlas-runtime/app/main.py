@@ -15,8 +15,8 @@ from pydantic import BaseModel
 import json
 
 from google.adk.runners import Runner
-from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
+from app.services.firestore_session import FirestoreSessionService
 
 RUNTIME_ROOT = Path(__file__).resolve().parent.parent
 if str(RUNTIME_ROOT) not in sys.path:
@@ -31,7 +31,7 @@ from agents.research.agent import research_agent
 from agents.morning_brief.agent import morning_brief_agent
 from app.auth import init_firebase_admin, require_uid
 
-session_service = InMemorySessionService()
+session_service = FirestoreSessionService()
 
 cos_runner = Runner(
     agent=cos_agent,

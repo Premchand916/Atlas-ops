@@ -140,7 +140,7 @@ state={"uid": uid, "startup_id": uid, "email": user.get("email")}
 ```
 
 ### Session management
-`InMemorySessionService` (current, through S12) → `FirestoreSessionService` (S13). The custom implementation lives at `app/services/firestore_session.py` and caps events at 100 per session to stay under Firestore's 1MB doc limit.
+`FirestoreSessionService` at `app/services/firestore_session.py` (added S13). Replaces `InMemorySessionService` — sessions survive cold starts. Document ID = `{app_name}_{user_id}_{session_id}` to avoid collisions (multiple users share session_id "default"). Events stored as JSON-string array, capped at 100 to stay under Firestore's 1 MB doc limit.
 
 ### Morning Brief (`SequentialAgent`)
 Three sub-agents run in sequence: `task_brief` (Firestore) → `market_brief` (google_search) → `brief_synthesizer` (no tools). Each writes to its own `output_key`; the synthesizer reads prior outputs from conversation state.
@@ -201,8 +201,8 @@ Body:    { message: str, session_id: str }
 | Session | Feature | Status |
 |---|---|---|
 | S01–S11 | Frontend, all 6 agents, auth, landing page | DONE |
-| S12 | Tenant isolation: ToolContext binding, remove LLM-fillable startup_id | **CURRENT** |
-| S13 | FirestoreSessionService — replace InMemorySessionService | NEXT |
+| S12 | Tenant isolation: ToolContext binding, remove LLM-fillable startup_id | DONE |
+| S13 | FirestoreSessionService — replace InMemorySessionService | **CURRENT** |
 | S14 | Cloud Run deploy + auxteam.in + Firebase Hosting | May 17 |
 | S15 | Stripe Checkout + webhook + subscriptions/{uid} | May 20 |
 | S16 | Paywall middleware + trial logic + entitlement checks | May 23 |
