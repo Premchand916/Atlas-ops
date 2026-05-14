@@ -1,6 +1,6 @@
 import os
 from google.cloud import firestore
-from google.adk.tools import FunctionTool
+from google.adk.tools import FunctionTool, ToolContext
 
 _db = None
 
@@ -20,14 +20,15 @@ def _serialize(doc: dict) -> dict:
 
 
 def create_task(
+    tool_context: ToolContext,
     title: str,
-    startup_id: str = "default",
     description: str = "",
     priority: str = "medium",
     due_date: str = "",
 ) -> dict:
     """Create a task. priority: high|medium|low. due_date: YYYY-MM-DD string or empty. Returns task_id."""
-    _, ref = _get_db().collection("startups").document(startup_id).collection("tasks").add(
+    uid = tool_context.state["uid"]
+    _, ref = _get_db().collection("startups").document(uid).collection("tasks").add(
         {
             "title": title,
             "description": description,
@@ -41,9 +42,10 @@ def create_task(
     return {"task_id": ref.id, "title": title, "status": "todo", "priority": priority}
 
 
-def list_tasks(startup_id: str = "default", status: str = "") -> dict:
+def list_tasks(tool_context: ToolContext, status: str = "") -> dict:
     """List tasks. status filter: todo|in_progress|done|'' (all)."""
-    col = _get_db().collection("startups").document(startup_id).collection("tasks")
+    uid = tool_context.state["uid"]
+    col = _get_db().collection("startups").document(uid).collection("tasks")
     query = col.where(filter=firestore.FieldFilter("status", "==", status)) if status else col
     tasks = []
     for doc in query.stream():
@@ -54,12 +56,13 @@ def list_tasks(startup_id: str = "default", status: str = "") -> dict:
     return {"tasks": tasks, "count": len(tasks)}
 
 
-def update_task_status(task_id: str, status: str, startup_id: str = "default") -> dict:
+def update_task_status(tool_context: ToolContext, task_id: str, status: str) -> dict:
     """Update task status. status: todo|in_progress|done."""
+    uid = tool_context.state["uid"]
     valid = {"todo", "in_progress", "done"}
     if status not in valid:
         return {"error": f"status must be one of {valid}"}
-    ref = _get_db().collection("startups").document(startup_id).collection("tasks").document(task_id)
+    ref = _get_db().collection("startups").document(uid).collection("tasks").document(task_id)
     doc = ref.get()
     if not doc.exists:
         return {"error": f"task {task_id} not found"}
@@ -67,9 +70,10 @@ def update_task_status(task_id: str, status: str, startup_id: str = "default") -
     return {"task_id": task_id, "status": status, "updated": True}
 
 
-def delete_task(task_id: str, startup_id: str = "default") -> dict:
+def delete_task(tool_context: ToolContext, task_id: str) -> dict:
     """Delete a task by ID."""
-    ref = _get_db().collection("startups").document(startup_id).collection("tasks").document(task_id)
+    uid = tool_context.state["uid"]
+    ref = _get_db().collection("startups").document(uid).collection("tasks").document(task_id)
     if not ref.get().exists:
         return {"error": f"task {task_id} not found"}
     ref.delete()

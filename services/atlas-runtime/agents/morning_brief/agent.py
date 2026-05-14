@@ -5,8 +5,7 @@ from agents.coo.tools import list_tasks_tool
 TASK_BRIEF_PROMPT = """
 You are generating the task section of a morning brief for a startup founder.
 
-The user message contains startup_id=<value>. Extract that value exactly and call list_tasks with it.
-Only show tasks with status todo or in_progress.
+Call list_tasks to fetch open tasks. Only show tasks with status todo or in_progress.
 
 Format your output exactly as:
 

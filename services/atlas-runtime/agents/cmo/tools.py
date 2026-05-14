@@ -1,7 +1,7 @@
 import os
 import time
 from google.cloud import firestore
-from google.adk.tools import FunctionTool
+from google.adk.tools import FunctionTool, ToolContext
 
 _db = None
 
@@ -13,10 +13,11 @@ def _get_db():
     return _db
 
 
-def save_content_draft(platform: str, content_type: str, content: str, startup_id: str = "default") -> dict:
+def save_content_draft(tool_context: ToolContext, platform: str, content_type: str, content: str) -> dict:
     """Save a content draft to Firestore. platform: twitter|linkedin|newsletter|blog. content_type: post|thread|headline|cta."""
+    uid = tool_context.state["uid"]
     doc_id = f"{platform}_{content_type}_{int(time.time())}"
-    _get_db().collection("startups").document(startup_id).collection("content_drafts").document(doc_id).set(
+    _get_db().collection("startups").document(uid).collection("content_drafts").document(doc_id).set(
         {
             "platform": platform,
             "content_type": content_type,
@@ -27,9 +28,10 @@ def save_content_draft(platform: str, content_type: str, content: str, startup_i
     return {"saved": doc_id, "platform": platform, "content_type": content_type}
 
 
-def get_content_drafts(startup_id: str = "default", platform: str = "") -> dict:
+def get_content_drafts(tool_context: ToolContext, platform: str = "") -> dict:
     """Retrieve saved content drafts, optionally filtered by platform."""
-    col = _get_db().collection("startups").document(startup_id).collection("content_drafts")
+    uid = tool_context.state["uid"]
+    col = _get_db().collection("startups").document(uid).collection("content_drafts")
     query = col.where(filter=firestore.FieldFilter("platform", "==", platform)) if platform else col
     docs = list(query.stream())
     drafts = []
