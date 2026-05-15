@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { auth } from '../lib/firebase'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -6,9 +7,9 @@ interface Message {
   streaming?: boolean
 }
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8001'
+const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8002'
 
-export function useChat(startupId: string, sessionId: string) {
+export function useChat(_startupId: string, sessionId: string) {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -18,11 +19,22 @@ export function useChat(startupId: string, sessionId: string) {
     setMessages(prev => [...prev, { role: 'assistant', content: '', streaming: true }])
 
     try {
+      const user = auth.currentUser
+      if (!user) throw new Error('Not signed in')
+      const idToken = await user.getIdToken()
+
       const response = await fetch(`${BACKEND}/chat/cos`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, startup_id: startupId, session_id: sessionId }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ message: text, session_id: sessionId }),
       })
+
+      if (!response.ok) {
+        throw new Error(`Backend ${response.status}`)
+      }
 
       const reader = response.body!.getReader()
       const decoder = new TextDecoder()
@@ -56,11 +68,13 @@ export function useChat(startupId: string, sessionId: string) {
       }
     } catch (err) {
       console.error('[atlas:chat]', err)
+      const detail =
+        err instanceof Error ? err.message : 'Unknown error'
       setMessages(prev => {
         const updated = [...prev]
         updated[updated.length - 1] = {
           role: 'assistant',
-          content: 'Connection error. Check backend is running on port 8001.',
+          content: `Chat failed: ${detail}. Verify ${BACKEND}/health responds and you're signed in.`,
           streaming: false,
         }
         return updated

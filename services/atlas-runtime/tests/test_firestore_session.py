@@ -7,14 +7,14 @@ Run: cd services/atlas-runtime && pytest tests/test_firestore_session.py -v
 Manual cold-start test (requires running backend + valid Firebase token):
 
     # Terminal 1
-    source .venv/bin/activate && uvicorn app.main:app --port 8001
+    source .venv/bin/activate && uvicorn app.main:app --port 8002
 
     # Terminal 2 — send intro message
     export TOKEN=<firebase_id_token>
     curl -s -H "Authorization: Bearer $TOKEN" \
          -H "Content-Type: application/json" \
          -d '{"message":"my startup is called Helix and we sell to dentists"}' \
-         http://localhost:8001/chat/cos
+         http://localhost:8002/chat/cos
 
     # Terminal 1 — Ctrl+C, restart uvicorn
 
@@ -22,7 +22,7 @@ Manual cold-start test (requires running backend + valid Firebase token):
     curl -s -H "Authorization: Bearer $TOKEN" \
          -H "Content-Type: application/json" \
          -d '{"message":"what was my startup name again?"}' \
-         http://localhost:8001/chat/cos
+         http://localhost:8002/chat/cos
     # EXPECT: agent recalls "Helix" (context survived restart)
 """
 

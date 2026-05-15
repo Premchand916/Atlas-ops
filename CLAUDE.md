@@ -26,10 +26,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Backend
 ```bash
-# Activate venv (from repo root), then start on port 8001
+# Activate venv (from repo root), then start on port 8002
 source .venv/bin/activate
 cd services/atlas-runtime
-uvicorn app.main:app --port 8001 --reload
+uvicorn app.main:app --port 8002 --reload
 ```
 
 ### Frontend
@@ -49,7 +49,7 @@ bash services/atlas-runtime/deploy.sh
 
 ### Test Stripe webhooks locally
 ```bash
-stripe listen --forward-to localhost:8001/billing/webhook
+stripe listen --forward-to localhost:8002/billing/webhook
 stripe trigger checkout.session.completed
 ```
 
@@ -72,7 +72,7 @@ VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_APP_ID=...
-VITE_BACKEND_URL=http://localhost:8001   # set to https://api.auxteam.in for prod
+VITE_BACKEND_URL=http://localhost:8002   # set to https://api.auxteam.in for prod
 ```
 
 ### Cloud Run (via Secret Manager + `--set-env-vars`)
@@ -157,7 +157,7 @@ data: {"response": "<final text>", "agent": "...", "startup_id": "..."}
 
 ## CURRENT STATE
 ```
-Backend:  WORKING — port 8001 (v0.6.0)
+Backend:  WORKING — port 8002 (v0.6.0)
 Frontend: DONE — port 5173
 Agents:   ALL 6 LIVE + Morning Brief SequentialAgent
 Auth:     Firebase ID token required on /chat/* — startup_id DERIVED from uid
