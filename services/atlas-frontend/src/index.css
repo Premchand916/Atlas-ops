@@ -1,1 +1,55 @@
 @import "tailwindcss";
+
+@theme {
+  --color-canvas: #faf9f5;
+  --color-canvas-2: #f3f1ea;
+  --color-ink: #2c2b26;
+  --color-ink-soft: #5a584f;
+  --color-ink-muted: #8a877c;
+  --color-line: #e8e4d9;
+  --color-line-strong: #d8d3c4;
+  --color-claude: #c96442;
+  --color-claude-hover: #b35636;
+  --color-claude-soft: #f6ebe5;
+
+  --font-serif: "Source Serif 4", "Source Serif Pro", "Tiempos", "Iowan Old Style",
+    "Apple Garamond", Georgia, ui-serif, serif;
+  --font-sans: "Söhne", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+html, body, #root {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background-color: var(--color-claude-soft);
+  color: var(--color-claude-hover);
+}
+
+@keyframes caret {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

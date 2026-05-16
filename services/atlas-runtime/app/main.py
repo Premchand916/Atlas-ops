@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import logging
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -13,6 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import json
+
+logger = logging.getLogger("atlas.runtime")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
 
 from google.adk.runners import Runner
 from google.genai.types import Content, Part
@@ -157,24 +161,49 @@ async def run_agent_stream(
         )
 
     async def stream():
+        logger.info("stream.start agent=%s uid=%s session=%s", agent_name, startup_id, session_id)
         yield f"data: {json.dumps({'status': 'started', 'agent': agent_name, 'startup_id': startup_id})}\n\n"
         content = Content(role="user", parts=[Part(text=message)])
         latest_text = ""
+        current_author: str | None = None
         try:
             async for event in runner.run_async(
                 user_id=startup_id,
                 session_id=session_id,
                 new_message=content,
             ):
+                author = getattr(event, "author", None) or agent_name
+                if author != current_author and author and author != "user":
+                    current_author = author
+                    logger.info("stream.step agent=%s step=%s status=running", agent_name, author)
+                    yield (
+                        f"data: {json.dumps({'type': 'step', 'step': author, 'status': 'running', 'agent': agent_name})}\n\n"
+                    )
+
                 text = extract_text(event)
                 if getattr(event, "partial", False) and text and text != latest_text:
                     latest_text = text
-                    yield f"data: {json.dumps({'type': 'chunk', 'response': text, 'agent': agent_name, 'startup_id': startup_id})}\n\n"
+                    yield (
+                        f"data: {json.dumps({'type': 'chunk', 'response': text, 'agent': agent_name, 'author': author, 'startup_id': startup_id})}\n\n"
+                    )
+
                 if event.is_final_response():
                     final_text = text or latest_text
-                    yield f"data: {json.dumps({'response': final_text, 'agent': agent_name, 'startup_id': startup_id})}\n\n"
-        except Exception:
-            yield f"data: {json.dumps({'error': 'agent error', 'agent': agent_name})}\n\n"
+                    logger.info(
+                        "stream.step agent=%s step=%s status=done bytes=%d",
+                        agent_name, author, len(final_text or ""),
+                    )
+                    yield (
+                        f"data: {json.dumps({'type': 'step', 'step': author, 'status': 'done', 'agent': agent_name})}\n\n"
+                    )
+                    yield (
+                        f"data: {json.dumps({'response': final_text, 'agent': agent_name, 'author': author, 'startup_id': startup_id})}\n\n"
+                    )
+                    latest_text = ""
+            logger.info("stream.end agent=%s uid=%s", agent_name, startup_id)
+        except Exception as exc:
+            logger.exception("stream.error agent=%s uid=%s", agent_name, startup_id)
+            yield f"data: {json.dumps({'error': str(exc), 'agent': agent_name})}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 

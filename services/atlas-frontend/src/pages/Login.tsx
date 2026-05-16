@@ -33,92 +33,158 @@ const AGENTS = [
   },
 ]
 
+const FEATURES = [
+  'All six specialists, always on',
+  'Live GitHub + Stripe integrations',
+  'Persistent memory across sessions',
+  'Morning brief, every day',
+  'Cancel anytime',
+]
+
 export default function Login() {
   const { authError, signIn } = useAuth()
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[var(--color-canvas)] text-[var(--color-ink)]">
       {/* Nav */}
-      <header className="px-6 py-5 flex items-center justify-between max-w-6xl mx-auto">
-        <span className="font-bold text-xl tracking-tight">ATLAS</span>
-        <button
-          onClick={signIn}
-          className="bg-white text-black px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-100 transition"
-        >
-          Sign in
-        </button>
+      <header className="px-6 py-5 border-b border-[var(--color-line)]">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-md bg-[var(--color-claude)] flex items-center justify-center">
+              <span className="text-[var(--color-canvas)] font-serif text-sm">A</span>
+            </div>
+            <span className="font-serif text-xl tracking-tight">Atlas</span>
+          </div>
+          <button
+            onClick={signIn}
+            className="text-sm font-medium text-[var(--color-ink-soft)] hover:text-[var(--color-ink)] transition"
+          >
+            Sign in →
+          </button>
+        </div>
       </header>
 
       {/* Hero */}
-      <section className="px-6 py-20 max-w-4xl mx-auto text-center">
-        <p className="text-green-400 text-xs uppercase tracking-widest mb-6">
+      <section className="px-6 pt-24 pb-20 max-w-4xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-claude-soft)] text-[var(--color-claude-hover)] text-xs font-medium mb-8">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-claude)]" />
           For solo founders
-        </p>
-        <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.05] mb-6">
+        </div>
+        <h1 className="font-serif text-5xl md:text-7xl leading-[1.05] tracking-tight mb-6">
           You're the CEO.
           <br />
-          <span className="text-gray-500">Everything below you is AI.</span>
+          <span className="text-[var(--color-ink-muted)] italic">
+            Everything below you is AI.
+          </span>
         </h1>
-        <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-10">
-          Six AI specialists — Chief of Staff, CTO, CMO, CFO, COO, Research —
-          working for you 24/7. No hiring. No equity. No drama.
+        <p className="text-[var(--color-ink-soft)] text-lg md:text-xl leading-relaxed max-w-2xl mb-10">
+          Six AI specialists — Chief of Staff, CTO, CMO, CFO, COO, Research — working
+          for you around the clock. No hiring. No equity. No drama.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <button
             onClick={signIn}
-            className="bg-white text-black px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition w-full sm:w-auto"
+            className="bg-[var(--color-claude)] text-white px-6 py-3 rounded-lg font-medium hover:bg-[var(--color-claude-hover)] transition shadow-sm"
           >
-            Sign in with Google
+            Continue with Google
           </button>
-          <span className="text-gray-600 text-sm">$49/month · cancel anytime</span>
+          <span className="text-[var(--color-ink-muted)] text-sm">
+            $49/month · cancel anytime
+          </span>
         </div>
         {authError && (
-          <p className="mt-4 text-sm text-red-300" role="alert">
+          <div
+            className="mt-6 max-w-md px-4 py-3 rounded-lg bg-[var(--color-claude-soft)] border border-[var(--color-claude)]/20 text-sm text-[var(--color-claude-hover)]"
+            role="alert"
+          >
             {authError}
-          </p>
+          </div>
         )}
       </section>
 
+      {/* Divider */}
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="border-t border-[var(--color-line)]" />
+      </div>
+
       {/* Agents */}
-      <section className="px-6 py-16 max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold mb-2">Your team, on day one.</h2>
-        <p className="text-gray-500 mb-10">
-          Each agent has the tools they need to actually do the work — not just talk about it.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <section className="px-6 py-24 max-w-6xl mx-auto">
+        <div className="max-w-2xl mb-14">
+          <p className="text-[var(--color-claude)] text-xs uppercase tracking-[0.18em] font-medium mb-3">
+            The team
+          </p>
+          <h2 className="font-serif text-4xl md:text-5xl tracking-tight mb-4">
+            Your team, on day one.
+          </h2>
+          <p className="text-[var(--color-ink-soft)] text-lg leading-relaxed">
+            Each agent has the tools they need to actually do the work — not just
+            talk about it.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[var(--color-line)] rounded-2xl overflow-hidden border border-[var(--color-line)]">
           {AGENTS.map(a => (
             <div
               key={a.role}
-              className="border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition"
+              className="bg-[var(--color-canvas)] p-7 hover:bg-[var(--color-canvas-2)] transition"
             >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-white">{a.role}</h3>
-                <span className="text-[10px] text-gray-600 uppercase tracking-wider">
-                  {a.tools}
-                </span>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2 h-2 rounded-full bg-[var(--color-claude)]" />
+                <h3 className="font-serif text-xl tracking-tight">{a.role}</h3>
               </div>
-              <p className="text-sm text-gray-400 leading-relaxed">{a.blurb}</p>
+              <p className="text-[var(--color-ink-soft)] text-[15px] leading-relaxed mb-5">
+                {a.blurb}
+              </p>
+              <p className="text-[11px] text-[var(--color-ink-muted)] uppercase tracking-[0.14em]">
+                {a.tools}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Pricing */}
-      <section className="px-6 py-20 max-w-3xl mx-auto text-center">
-        <h2 className="text-3xl font-bold mb-4">One price. One team.</h2>
-        <div className="border border-gray-800 rounded-2xl p-10 mt-8">
-          <div className="text-6xl font-bold mb-2">$49</div>
-          <div className="text-gray-500 mb-8">per month</div>
-          <ul className="text-sm text-gray-400 space-y-2 mb-8 max-w-sm mx-auto text-left">
-            <li>· All six specialists, always on</li>
-            <li>· Live GitHub + Stripe integrations</li>
-            <li>· Persistent memory across sessions</li>
-            <li>· Morning brief, daily</li>
-            <li>· Cancel anytime</li>
+      <section className="px-6 py-24 max-w-3xl mx-auto">
+        <div className="text-center mb-12">
+          <p className="text-[var(--color-claude)] text-xs uppercase tracking-[0.18em] font-medium mb-3">
+            Pricing
+          </p>
+          <h2 className="font-serif text-4xl md:text-5xl tracking-tight">
+            One price. One team.
+          </h2>
+        </div>
+        <div className="bg-[var(--color-canvas-2)] border border-[var(--color-line)] rounded-2xl p-10 md:p-12">
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="font-serif text-6xl tracking-tight">$49</span>
+            <span className="text-[var(--color-ink-muted)] text-lg">/month</span>
+          </div>
+          <p className="text-[var(--color-ink-soft)] mb-8">
+            Everything. No add-ons. No seats. No tiers.
+          </p>
+          <ul className="space-y-3 mb-10">
+            {FEATURES.map(f => (
+              <li
+                key={f}
+                className="flex items-start gap-3 text-[var(--color-ink-soft)]"
+              >
+                <svg
+                  className="w-5 h-5 mt-0.5 text-[var(--color-claude)] flex-shrink-0"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  aria-hidden
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42L8.5 12.08l6.79-6.79a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>{f}</span>
+              </li>
+            ))}
           </ul>
           <button
             onClick={signIn}
-            className="bg-white text-black px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition"
+            className="w-full sm:w-auto bg-[var(--color-claude)] text-white px-6 py-3 rounded-lg font-medium hover:bg-[var(--color-claude-hover)] transition shadow-sm"
           >
             Start with Google
           </button>
@@ -126,8 +192,20 @@ export default function Login() {
       </section>
 
       {/* Footer */}
-      <footer className="px-6 py-10 border-t border-gray-900 text-center text-xs text-gray-600">
-        ATLAS · auxteam.in · You're the CEO. Everything below you is AI.
+      <footer className="border-t border-[var(--color-line)]">
+        <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[var(--color-ink-muted)] text-sm">
+            <div className="w-5 h-5 rounded bg-[var(--color-claude)] flex items-center justify-center">
+              <span className="text-[var(--color-canvas)] font-serif text-[10px]">A</span>
+            </div>
+            <span className="font-serif">Atlas</span>
+            <span>·</span>
+            <span>auxteam.in</span>
+          </div>
+          <p className="text-xs text-[var(--color-ink-muted)] italic">
+            You're the CEO. Everything below you is AI.
+          </p>
+        </div>
       </footer>
     </div>
   )
